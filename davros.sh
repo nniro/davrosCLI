@@ -68,7 +68,7 @@ showHelp() {
 	echo "Valid commands : "
 	echo ""
 	echo "	ls <path>			list the content of a directory"
-	echo "	get [-s] <path>			download a single file. (-s -> to stdout)"
+	echo "	get [-s] [-a] <path>		download a single file. (-s -> to stdout) (-a -> get all the content of a folder, but not subfolders)"
 	echo "	put [<path>] [directory/]	upload a set of files where the last entry is a destination directory which *must* end with '/'"
 	echo "	mv <path> <path>		move a file or directory to a new destination"
 	echo "	rm <path>			delete a file or directory"
@@ -99,17 +99,31 @@ case $1 in
 	get)
 		shift
 		toStdout="false"
-		while getopts s f 2>/dev/null; do
+		getAll="false"
+		while getopts sa f 2>/dev/null; do
 			case $f in
 				s) toStdout="true";;
+				a) getAll="true";;
 			esac
 		done
 		[ $(($OPTIND > 1)) = 1 ] && shift $(expr $OPTIND - 1)
 
 		extraArgs=""
-		if [ "$toStdout" = "false" ]; then extraArgs="$extraArgs -o $(basename $1)"; fi
 
-		runCurl $args $url/$1 $extraArgs
+
+		if [ "$getAll" = "true" ]; then
+			fList="$(list "$url" "$args" $1 | sed -e 's/^\/*//')"
+			for f in $fList; do
+				if echo $f | grep -q '/$'; then # this is a directory
+					[ ! -d $f ] && mkdir $f
+				else
+					runCurl $args $url/$f $extraArgs -o "$(printf "%s" "$f" | sed -e 's/%20/ /g')"
+				fi
+			done
+		else
+			if [ "$toStdout" = "false" ]; then extraArgs="$extraArgs -o \"$(basename $1 | sed -e 's/%20/ /g')\""; fi
+			runCurl $args $url/$1 $extraArgs
+		fi
 	;;
 
 	put)
