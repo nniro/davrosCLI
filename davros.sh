@@ -76,6 +76,16 @@ showHelp() {
 	echo ""
 }
 
+list() {
+	url=$1
+	args=$2
+	shift 2
+	if [ "$1" != "" ]; then url="$url/$1"; fi
+
+	result=$(runCurl $args -X PROPFIND $url | gzip -dc 2>/dev/null || runCurl $args -X PROPFIND $url)
+	printf "%s" "$result" | sed -e 's/\(<\/[^>]*>\)/\1\n/g' | sed -ne '/<d:href>/ s/.*<d:href>\(.*\)<\/d:href>/\1/ p' | sed -e "s@/$pathPrefix@@"
+}
+
 case $1 in
 	h|help)
 		showHelp
@@ -83,9 +93,7 @@ case $1 in
 
 	ls|list)
 		shift
-		if [ "$1" != "" ]; then url="$url/$1"; fi
-		result=$(runCurl $args -X PROPFIND $url | gzip -dc 2>/dev/null || runCurl $args -X PROPFIND $url)
-		printf "%s" "$result" | sed -e 's/\(<\/[^>]*>\)/\1\n/g' | sed -ne '/<d:href>/ s/.*<d:href>\(.*\)<\/d:href>/\1/ p' | sed -e "s@/$pathPrefix@@"
+		list "$url" "$args" $1
 	;;
 
 	get)
