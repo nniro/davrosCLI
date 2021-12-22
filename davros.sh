@@ -7,6 +7,8 @@ if [ "$token" != "" ]; then
 	token="-H 'Authorization: Bearer $token'"
 fi
 
+alias runCurl="curl $token"
+
 if ! echo "$url" | grep -q "^https://"; then
 	echo "The first argument must be a Sandstorm webkey"
 	exit 1
@@ -17,7 +19,7 @@ pathPrefix=remote.php/webdav
 url=$url/$pathPrefix
 shift
 
-args="--silent $token"
+args="--silent"
 
 putData() {
 	if [ -d $1 ]; then
@@ -30,7 +32,7 @@ putData() {
 
 	if [ "$1" = "$dst" ]; then
 		# copy a single file on the root
-		eval curl $args -T "$1" "$url/$(basename $1)"
+		runCurl $args -T "$1" "$url/$(basename $1)"
 		return
 	fi
 
@@ -57,7 +59,7 @@ putData() {
 			curDst=$(basename $1)
 		fi
 
-		eval curl $args -T "$1" "$url/$curDst"
+		runCurl $args -T "$1" "$url/$curDst"
 		shift
 	done
 }
@@ -82,7 +84,7 @@ case $1 in
 	ls|list)
 		shift
 		if [ "$1" != "" ]; then url="$url/$1"; fi
-		result=$(eval curl $args -X PROPFIND $url | gzip -dc 2>/dev/null || eval curl $args -X PROPFIND $url)
+		result=$(runCurl $args -X PROPFIND $url | gzip -dc 2>/dev/null || runCurl $args -X PROPFIND $url)
 		printf "%s" "$result" | sed -e 's/\(<\/[^>]*>\)/\1\n/g' | sed -ne '/<d:href>/ s/.*<d:href>\(.*\)<\/d:href>/\1/ p' | sed -e "s@/$pathPrefix@@"
 	;;
 
@@ -99,7 +101,7 @@ case $1 in
 		extraArgs=""
 		if [ "$toStdout" = "false" ]; then extraArgs="$extraArgs -o $(basename $1)"; fi
 
-		eval curl $args $url/$1 $extraArgs
+		runCurl $args $url/$1 $extraArgs
 	;;
 
 	put)
@@ -110,19 +112,19 @@ case $1 in
 
 	mv)
 		shift
-		eval curl $args -X MOVE --header "'Destination: /remote.php/webdav/$2'" "'$url/$1'"
+		runCurl $args -X MOVE --header "'Destination: /remote.php/webdav/$2'" "'$url/$1'"
 	;;
 
 	rm)
 		shift
 		if [ "$1" != "" ]; then # just a small failsafe
-			eval curl $args -X DELETE $url/$1
+			runCurl $args -X DELETE $url/$1
 		fi
 	;;
 
 	mkdir)
 		shift
-		eval curl $args -X MKCOL $url/$1
+		runCurl $args -X MKCOL $url/$1
 	;;
 
 	*)
