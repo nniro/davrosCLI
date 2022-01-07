@@ -1,7 +1,7 @@
 #! /bin/sh
 
 token="$(printf "%s" "$1" | sed -ne 's/[^\#]*\#\(.*\)$/\1/ p')"
-url="$(printf "%s" "$1" | sed -e 's/^\(.*\)\#.*$/\1/')"
+url="$(printf "%s" "$1" | sed -e 's/^\(.*\)\#.*$/\1/' | sed -e 's/^\(.*\)\/\+$/\1/')"
 
 if [ "$token" != "" ]; then
 	token="-H 'Authorization: Bearer $token'"
