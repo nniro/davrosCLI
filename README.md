@@ -1,0 +1,31 @@
+= DavrosCLI
+
+== This project is a Command Line Interface to the davros App available on sandstorm.
+
+It permits to download and upload files from a sandstorm davros app from the command line.
+
+To use it, from sandstorm, either create a new davros grain or use an existing one.
+Generate a new web key with the icon looking like a key (Get webkey). Give it the permissions
+you want; if you want to upload files, it may be better to give write access :).
+Copy paste the whole key into a new shell script (An example is following).
+
+Webkeys look like this : 
+
+----
+https://api-3c31169062d772c4b37a5ac639c6c6d5c5632c.sandstorm.io#3805f158f3c5ec84e60471aa10ecaf7cda8d3fe7
+----
+
+your shell script could be like so :
+
+----
+#! /bin/sh
+
+webkey=https://api-3c31169062d772c4b37a5ac639c6c6d5c5632c.sandstorm.io#3805f158f3c5ec84e60471aa10ecaf7cda8d3fe7
+
+sh ~/src/davrosCLI/davros.sh $webkey "$@"
+----
+
+at that point, you can use that shell script to interface with your davros grain.
+The commands available are similar to what is available in sftp and such. To get a list of available commands,
+just run the script without any arguments.
+
