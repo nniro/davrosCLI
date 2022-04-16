@@ -29,3 +29,22 @@ at that point, you can use that shell script to interface with your davros grain
 The commands available are similar to what is available in sftp and such. To get a list of available commands,
 just run the script without any arguments.
 
+== Usage example
+
+say we saved the above script to the file 'myDavros.sh', here's how to upload a file
+
+We first create a new directory :
+
+----
+sh myDavros.sh mkdir /stuff
+----
+
+Say we wanted to upload the files : foo1.txt, foo2.txt, video.mp4, ebook.epub
+
+We can do it like so :
+
+----
+sh myDavros.sh put foo1.txt foo2.txt video.mp4 ebook.epub /stuff/
+----
+
+The last entry is always the destination directory and it is mandatory to end it with a slash (/).
