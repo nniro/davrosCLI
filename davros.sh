@@ -68,8 +68,11 @@ showHelp() {
 	echo "Valid commands : "
 	echo ""
 	echo "	ls <path>			list the content of a directory"
-	echo "	get [-s] [-a] <path>		download a single file. (-s -> to stdout) (-a -> get all the content of a folder, but not subfolders)"
-	echo "	put [<path>] [directory/]	upload a set of files where the last entry is a destination directory which *must* end with '/'"
+	echo "	get [-s] [-r] <path>		download a file or directory."
+	echo "					-s : to stdout (only works with files)"
+	echo "					-r : get files recursively"
+	echo "	put [<path>] [directory/]	upload a set of files where the last entry is a"
+	echo "					destination directory which *must* end with '/'"
 	echo "	mv <path> <path>		move a file or directory to a new destination"
 	echo "	rm <path>			delete a file or directory"
 	echo "	mkdir <path>			create a new directory"
@@ -86,6 +89,51 @@ list() {
 	printf "%s" "$result" | sed -e 's/\(<\/[^>]*>\)/\1\n/g' | sed -ne '/<d:href>/ s/.*<d:href>\(.*\)<\/d:href>/\1/ p' | sed -e "s@/$pathPrefix@@"
 }
 
+removeStartingSlashes() {
+	sed -e 's/^\/*//'
+}
+
+removeEndingSlashes() {
+	sed -e 's/\/*$//'
+}
+
+isRemoteDirectory() {
+	[ "$1" = "/" ] && return 0
+	local path=$(echo $1 | removeEndingSlashes | removeStartingSlashes)
+
+	fList="$(list "$url" "$args" $path | removeStartingSlashes)"
+
+	set -- $fList
+
+	echo $1 | grep -q "^$path/$"
+}
+
+getDirectoryContent() {
+	local path=$1
+	local recursive=$2
+
+	[ "$path" != "/" ] && path="$(echo $path | removeStartingSlashes)"
+
+	echo $path | grep -q '\/$' || path="$path/"
+
+	[ "$recursive" = "" ] && recursive="false"
+
+	fList="$(list "$url" "$args" $path | removeStartingSlashes)"
+	for f in $fList; do
+		[ -d ./$f ] && [ "$f" = "$path" ] && continue
+		if echo $f | grep -q '/$'; then # this is a directory
+			if [ "$recursive" = "true" ]; then
+				[ ! -d ./$f ] && mkdir -p ./$f
+				getDirectoryContent "$f" true
+			else
+				[ ! -d ./$f ] && [ "$f" = "$path" ] && mkdir -p ./$f
+			fi
+		else
+			runCurl $args $url/$f $extraArgs -o "$(printf "%s" "$f" | sed -e 's/%20/ /g')"
+		fi
+	done
+}
+
 case $1 in
 	h|help)
 		showHelp
@@ -99,27 +147,19 @@ case $1 in
 	get)
 		shift
 		toStdout="false"
-		getAll="false"
-		while getopts sa f 2>/dev/null; do
+		recursive="false"
+		while getopts sr f 2>/dev/null; do
 			case $f in
 				s) toStdout="true";;
-				a) getAll="true";;
+				r) recursive="true";;
 			esac
 		done
 		[ $(($OPTIND > 1)) = 1 ] && shift $(expr $OPTIND - 1)
 
 		extraArgs=""
 
-
-		if [ "$getAll" = "true" ]; then
-			fList="$(list "$url" "$args" $1 | sed -e 's/^\/*//')"
-			for f in $fList; do
-				if echo $f | grep -q '/$'; then # this is a directory
-					[ ! -d $f ] && mkdir $f
-				else
-					runCurl $args $url/$f $extraArgs -o "$(printf "%s" "$f" | sed -e 's/%20/ /g')"
-				fi
-			done
+		if isRemoteDirectory $1; then
+			getDirectoryContent $1 $recursive
 		else
 			if [ "$toStdout" = "false" ]; then extraArgs="$extraArgs -o \"$(basename $1 | sed -e 's/%20/ /g')\""; fi
 			runCurl $args $url/$1 $extraArgs
