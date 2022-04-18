@@ -161,8 +161,11 @@ case $1 in
 		if isRemoteDirectory $1; then
 			getDirectoryContent $1 $recursive
 		else
-			if [ "$toStdout" = "false" ]; then extraArgs="$extraArgs -o \"$(basename $1 | sed -e 's/%20/ /g')\""; fi
-			runCurl $args $url/$1 $extraArgs
+			if [ "$toStdout" = "false" ]; then
+				runCurl $args $url/$1 $extraArgs -o "$(basename $1 | sed -e 's/%20/ /g')"
+			else
+				runCurl $args $url/$1 $extraArgs
+			fi
 		fi
 	;;
 
